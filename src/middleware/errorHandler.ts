@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError.js";
+import { ZodError } from "zod";
 
 function isDuplicateKeyError(err: unknown): boolean {
   return (
@@ -23,6 +24,18 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  if (err instanceof ZodError) {
+    res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      errors: err.issues.map((issue) => ({
+        field: issue.path.map(String).join("."),
+        message: issue.message,
+      })),
+    });
+    return;
+  }
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ success: false, message: err.message });
     return;
@@ -32,6 +45,18 @@ export function errorHandler(
     res
       .status(409)
       .json({ success: false, message: "Resource already exists" });
+    return;
+  }
+
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "type" in err &&
+    err.type === "entity.parse.failed"
+  ) {
+    res
+      .status(400)
+      .json({ success: false, message: "Malformed JSON in request body" });
     return;
   }
 

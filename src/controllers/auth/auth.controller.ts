@@ -1,21 +1,13 @@
 import type { Request, Response } from "express";
-import { User, type UserDocument } from "../models/User.js";
-import { AppError } from "../utils/AppError.js";
-import { hashPassword, comparePassword } from "../utils/password.js";
-import { signToken } from "../utils/jwt.js";
+import { User } from "../../models/user/user.model.js";
+import { AppError } from "../../utils/AppError.js";
+import { hashPassword, comparePassword } from "../../utils/password.js";
+import { signToken } from "../../utils/jwt.js";
+import { serializeSelf } from "../../utils/serializers.js";
 import type {
   RegisterInput,
   LoginInput,
-} from "../validators/auth.validator.js";
-
-function toPublicUser(user: UserDocument) {
-  return {
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    avatar: user.avatar,
-  };
-}
+} from "../../validators/auth/auth.validator.js";
 
 export async function register(
   req: Request<unknown, unknown, RegisterInput>,
@@ -34,7 +26,7 @@ export async function register(
   res.status(201).json({
     success: true,
     token: signToken(user.id),
-    user: toPublicUser(user),
+    user: serializeSelf(user),
   });
 }
 
@@ -56,7 +48,7 @@ export async function login(
   res.json({
     success: true,
     token: signToken(user.id),
-    user: toPublicUser(user),
+    user: serializeSelf(user),
   });
 }
 
@@ -67,5 +59,5 @@ export async function me(req: Request, res: Response): Promise<void> {
     throw new AppError(401, "User no longer exists");
   }
 
-  res.json({ success: true, user: toPublicUser(user) });
+  res.json({ success: true, user: serializeSelf(user) });
 }
