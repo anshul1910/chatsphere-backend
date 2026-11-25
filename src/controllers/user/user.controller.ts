@@ -8,6 +8,7 @@ import {
   updateProfileSchema,
   userIdParamSchema,
 } from "../../validators/user/user.validator.js";
+import { uploadAvatar } from "../../utils/uploadAvatar.js";
 
 export async function searchUsers(req: Request, res: Response): Promise<void> {
   const { q, limit } = searchUsersQuerySchema.parse(req.query);
@@ -47,6 +48,24 @@ export async function updateMe(req: Request, res: Response): Promise<void> {
   if (!user) {
     throw new AppError(404, "User not found");
   }
+
+  res.json({ success: true, user: serializeSelf(user) });
+}
+
+export async function uploadMyAvatar(req: Request, res: Response) {
+  const userId = req.userId;
+  if (!userId) throw new AppError(401, "Not authenticated");
+  if (!req.file) throw new AppError(400, "No image uploaded");
+
+  const url = await uploadAvatar(req.file.buffer, userId);
+  const avatar = `${url}?v=${Date.now()}`;
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { avatar },
+    { new: true, runValidators: true },
+  );
+  if (!user) throw new AppError(404, "User not found");
 
   res.json({ success: true, user: serializeSelf(user) });
 }

@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError.js";
 import { ZodError } from "zod";
+import { MulterError } from "multer";
 
 function isDuplicateKeyError(err: unknown): boolean {
   return (
@@ -38,6 +39,15 @@ export function errorHandler(
 
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ success: false, message: err.message });
+    return;
+  }
+
+  if (err instanceof MulterError) {
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "Image must be 2 MB or smaller"
+        : "Invalid file upload";
+    res.status(400).json({ success: false, message });
     return;
   }
 
